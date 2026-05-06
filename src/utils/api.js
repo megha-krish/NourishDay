@@ -95,6 +95,37 @@ function passesRestrictions(item, restrictions) {
         if (GLUTEN_KEYWORDS.some(kw => nameLower.includes(kw))) return false
     }
 
+    if (restrictions.includes('nut_free')) {
+        if (['peanut', 'almond', 'cashew', 'walnut', 'pecan',
+            'pistachio', 'hazelnut', 'macadamia', 'pine nut',
+            'nut'].some(w => nameLower.includes(w))) return false
+    }
+
+    if (restrictions.includes('dairy_free')) {
+        if (DAIRY_CATEGORIES.includes(cat)) return false
+        if (['milk', 'cheese', 'butter', 'cream', 'yogurt', 'ghee',
+            'whey', 'lactose', 'mozzarella', 'cheddar', 'parmesan',
+            'ricotta', 'brie', 'gouda', 'feta', 'labneh',
+            'gorgonzola', 'pecorino'].some(w => nameLower.includes(w))) return false
+    }
+
+    if (restrictions.includes('egg_free')) {
+        if (['egg', 'eggs benedict', 'omelette', 'frittata',
+            'quiche', 'meringue'].some(w => nameLower.includes(w))) return false
+    }
+
+    if (restrictions.includes('shellfish_free')) {
+        if (FISH_CATEGORIES.includes(cat)) return false
+        if (['shrimp', 'lobster', 'crab', 'scallop', 'clam',
+            'mussel', 'oyster', 'crawfish', 'prawn',
+            'calamari'].some(w => nameLower.includes(w))) return false
+    }
+
+    if (restrictions.includes('soy_free')) {
+        if (['tofu', 'tempeh', 'edamame', 'miso', 'soy',
+            'soyrizo', 'seitan'].some(w => nameLower.includes(w))) return false
+    }
+
     return true
 }
 

@@ -20,9 +20,14 @@ export const ACTIVITY_LEVELS = [
 ]
 
 export const DIETARY_RESTRICTIONS = [
-    { value: 'vegetarian',  label: 'Vegetarian',  emoji: '🥦' },
-    { value: 'vegan',       label: 'Vegan',       emoji: '🌱' },
-    { value: 'gluten_free', label: 'Gluten-Free', emoji: '🌾' },
+    { value: 'vegetarian',  label: 'Vegetarian',   emoji: '🥦' },
+    { value: 'vegan',       label: 'Vegan',        emoji: '🌱' },
+    { value: 'gluten_free', label: 'Gluten-Free',  emoji: '🌾' },
+    { value: 'nut_free',    label: 'Nut-Free',     emoji: '🥜' },
+    { value: 'dairy_free',  label: 'Dairy-Free',   emoji: '🥛' },
+    { value: 'egg_free',    label: 'Egg-Free',     emoji: '🥚' },
+    { value: 'shellfish_free', label: 'No Shellfish', emoji: '🦐' },
+    { value: 'soy_free',    label: 'Soy-Free',     emoji: '🫘' },
 ]
 
 export const CUISINES = [
