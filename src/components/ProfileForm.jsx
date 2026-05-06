@@ -47,19 +47,20 @@ export default function ProfileForm({ onSubmit, initialProfile }) {
         if (!form.age || form.age < 18 || form.age > 100) e.age = 'Enter an age between 18–100'
         if (!form.weightLbs || form.weightLbs < 50 || form.weightLbs > 700) e.weightLbs = 'Enter a valid weight'
         if (!form.heightFt || form.heightFt < 3 || form.heightFt > 8) e.heightFt = 'Enter feet (3–8)'
-        if (form.heightIn === '' || form.heightIn === undefined || form.heightIn < 0 || form.heightIn > 11)
+        if (form.heightIn === '' || form.heightIn === undefined || Number(form.heightIn) < 0 || Number(form.heightIn) > 11) e.heightIn = '0–11 inches'
         return e
     }
 
     function handleSubmit() {
+        console.log('form state:', form)
         const e = validate()
+        console.log('errors:', e)
         if (Object.keys(e).length > 0) {
             setErrors(e)
             return
         }
         onSubmit(form)
     }
-
     return (
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 20px 60px' }}>
             <div style={{ marginBottom: 36 }}>
