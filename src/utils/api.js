@@ -1,3 +1,16 @@
+/**
+ * Meal generation from the Kaggle Daily Food & Nutrition Dataset.
+ * Source: https://www.kaggle.com/datasets/adilshamim8/daily-food-and-nutrition-dataset
+ *
+ * Main strategy:
+ * 1. Load and parse the CSV (in /public/nutrition.csv)
+ * 2. Filter to complete meals only (category starts with "Meal/")
+ * 3. Apply dietary restriction filters
+ * 4. For each meal type (Breakfast/Lunch/Dinner), pick a random meal
+ *    whose calories fit within the target distribution
+ * 5. Return in the same shape the rest of the app expects
+ */
+
 const MEAT_CATEGORIES = ['Meal/Meat', 'Protein/Meat', 'Protein/Processed']
 const FISH_CATEGORIES = ['Meal/Fish', 'Meal/Seafood', 'Protein/Fish', 'Protein/Seafood']
 const DAIRY_CATEGORIES = ['Dairy', 'Dairy/Dessert', 'Condiment/Dairy', 'Protein/Dairy', 'Beverage/Dairy']
@@ -38,20 +51,20 @@ const CUISINE_KEYWORDS = {
     american:      ['burger', 'sandwich', 'bbq', 'mac and cheese', 'hot dog',
         'pancake', 'waffle', 'meatloaf', 'pot roast', 'cornbread',
         'biscuits and gravy', 'pulled pork', 'reuben', 'club'],
-        indian: ['curry', 'dal', 'biryani', 'tikka', 'naan bread', 'samosa',
-            'paneer', 'masala', 'tandoori', 'dosa', 'korma', 'vindaloo',
-            'lentil', 'chickpea', 'chana', 'aloo', 'saag', 'raita'],
+    indian:        ['curry', 'dal', 'biryani', 'tikka', 'naan bread', 'samosa',
+        'paneer', 'masala', 'tandoori', 'dosa', 'korma', 'vindaloo',
+        'lentil', 'chickpea', 'chana', 'aloo', 'saag', 'raita'],
 }
 
 const CUISINE_SIDES = {
     italian:       ['broccoli', 'spinach', 'asparagus', 'zucchini',
         'cannellini', 'white beans', 'green beans'],
-    mexican:       ['black beans', 'refried beans', 'corn', 'pinto'],
+    mexican:       ['black beans', 'refried beans', 'pinto', 'salsa', 'guacamole'],
     asian:         ['bok choy', 'edamame', 'kimchi', 'bean sprouts',
         'seaweed', 'green onion'],
-    mediterranean: ['hummus', 'cucumber', 'olives', 'lentil', 'chickpea',
+    mediterranean: ['cucumber', 'olives', 'lentil', 'chickpea',
         'feta', 'tomato', 'labneh'],
-    american:      ['coleslaw', 'corn', 'potato', 'green beans', 'cornbread'],
+    american:      ['coleslaw', 'potato', 'green beans', 'cornbread'],
     indian:        ['lentil', 'chickpea', 'spinach', 'cauliflower',
         'cucumber', 'dal'],
 }
@@ -157,7 +170,7 @@ function pickRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function pickMealNearTarget(meals, targetCalories, tolerancePct = 0.5) {
+function pickMealNearTarget(meals, targetCalories, tolerancePct = 0.7) {
     const min = targetCalories * (1 - tolerancePct)
     const max = targetCalories * (1 + tolerancePct)
     const inRange = meals.filter(m => m.calories >= min && m.calories <= max)
@@ -231,7 +244,6 @@ function pickSide(allFoods, mealType, mainName, mainCalories, targetCalories, re
     const mainWords = mainName.toLowerCase().split(/\s+/)
     const compatibleSides = sides.filter(s => {
         const sideLower = s.name.toLowerCase()
-        // Don't pair a side that shares a key word with the main meal
         if (mainWords.some(w => w.length > 3 && sideLower.includes(w))) return false
         return compatibleKeywords.some(kw => sideLower.includes(kw))
     })
@@ -262,8 +274,8 @@ function combineMeal(type, main, side) {
         description: generateDescription({
             protein: main.protein + (side?.protein || 0),
             carbs:   main.carbs   + (side?.carbs   || 0),
-            fat:     main.fat     + (side?.fat     || 0),
-            fiber:   main.fiber   + (side?.fiber   || 0),
+            fat:     main.fat     + (side?.fat      || 0),
+            fiber:   main.fiber   + (side?.fiber    || 0),
         }),
     }
 }
@@ -295,26 +307,30 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
         })
 
         const breakfastTarget = Math.round(calorieTarget * 0.25)
-        const lunchTarget = Math.round(calorieTarget * 0.35)
-        const dinnerTarget = Math.round(calorieTarget * 0.40)
+        const lunchTarget     = Math.round(calorieTarget * 0.35)
+        const dinnerTarget    = Math.round(calorieTarget * 0.40)
 
         const savedBreakfast = savedMeals.filter(m => m.type === 'Breakfast')
-        const savedLunch = savedMeals.filter(m => m.type === 'Lunch' || m.type === 'Dinner')
-        const savedDinner = savedMeals.filter(m => m.type === 'Dinner' || m.type === 'Lunch')
+        const savedLunch     = savedMeals.filter(m => m.type === 'Lunch' || m.type === 'Dinner')
+        const savedDinner    = savedMeals.filter(m => m.type === 'Dinner' || m.type === 'Lunch')
 
         const csvBreakfast = csvPool.filter(m => m.mealType === 'Breakfast')
-        const csvLunch = csvPool.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
-        const csvDinner = csvPool.filter(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
+        const csvLunch     = csvPool.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
+        const csvDinner    = csvPool.filter(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
 
         const breakfast = pickWithFallback(savedBreakfast, csvBreakfast, breakfastTarget, [])
-        const lunch = pickWithFallback(savedLunch, csvLunch, lunchTarget, [breakfast.name])
-        const dinner = pickWithFallback(savedDinner, csvDinner, dinnerTarget, [breakfast.name, lunch.name])
+        const lunch     = pickWithFallback(savedLunch, csvLunch, lunchTarget, [breakfast.name])
+        const dinner    = pickWithFallback(savedDinner, csvDinner, dinnerTarget, [breakfast.name, lunch.name])
 
-        const totalCalories = breakfast.calories + lunch.calories + dinner.calories
+        const finalTotal = breakfast.calories + lunch.calories + dinner.calories
+
         return {
             meals: [breakfast, lunch, dinner],
-            totalCalories: Math.round(totalCalories),
-            nutritionNote: `This plan prioritizes your saved meals and provides approximately ${Math.round(totalCalories)} calories.`,
+            totalCalories: finalTotal,
+            cuisineWarning: null,
+            nutritionNote: finalTotal < calorieTarget * 0.85
+                ? `Note: This plan provides ${finalTotal} calories. The dataset may not have enough meals to fully match your ${calorieTarget} calorie target — consider adding snacks to bridge the gap.`
+                : `This plan prioritizes your saved meals and provides approximately ${finalTotal} calories.`,
         }
     }
 
@@ -339,12 +355,12 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
     const { meals: cuisineFiltered, fellBack: cuisineFellBack } = applyCuisineFilter(mains, cuisines)
 
     const breakfastPool = cuisineFiltered.filter(m => m.mealType === 'Breakfast')
-    const lunchPool = cuisineFiltered.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
-    const dinnerPool = cuisineFiltered.filter(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
+    const lunchPool     = cuisineFiltered.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
+    const dinnerPool    = cuisineFiltered.filter(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
 
     const breakfastTarget = Math.round(calorieTarget * 0.25)
-    const lunchTarget = Math.round(calorieTarget * 0.35)
-    const dinnerTarget = Math.round(calorieTarget * 0.40)
+    const lunchTarget     = Math.round(calorieTarget * 0.35)
+    const dinnerTarget    = Math.round(calorieTarget * 0.40)
 
     const breakfastMain = pickMealBalanced(
         breakfastPool.length > 0 ? breakfastPool : mains.filter(m => m.mealType === 'Breakfast'),
@@ -378,21 +394,23 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
     const usedNames = [breakfastMain.name, lunchMain.name, dinnerMain.name]
 
     const breakfastSide = pickSide(allFoods, 'Breakfast', breakfastMain.name, breakfastMain.calories, breakfastTarget, restrictions, usedNames)
-    const lunchSide = pickSide(allFoods, 'Lunch', lunchMain.name, lunchMain.calories, lunchTarget, restrictions, usedNames)
-    const dinnerSide = pickSide(allFoods, 'Dinner', dinnerMain.name, dinnerMain.calories, dinnerTarget, restrictions, usedNames)
+    const lunchSide     = pickSide(allFoods, 'Lunch', lunchMain.name, lunchMain.calories, lunchTarget, restrictions, usedNames)
+    const dinnerSide    = pickSide(allFoods, 'Dinner', dinnerMain.name, dinnerMain.calories, dinnerTarget, restrictions, usedNames)
 
     const breakfast = combineMeal('Breakfast', breakfastMain, breakfastSide)
-    const lunch = combineMeal('Lunch', lunchMain, lunchSide)
-    const dinner = combineMeal('Dinner', dinnerMain, dinnerSide)
+    const lunch     = combineMeal('Lunch', lunchMain, lunchSide)
+    const dinner    = combineMeal('Dinner', dinnerMain, dinnerSide)
 
-    const totalCalories = breakfast.calories + lunch.calories + dinner.calories
+    const finalTotal = breakfast.calories + lunch.calories + dinner.calories
 
     return {
         meals: [breakfast, lunch, dinner],
-        totalCalories: Math.round(totalCalories),
-        nutritionNote: `This plan provides approximately ${Math.round(totalCalories)} calories, following USDA guidelines with a 25/35/40 breakfast-lunch-dinner split.`,
+        totalCalories: finalTotal,
         cuisineWarning: cuisineFellBack
             ? `We couldn't find enough ${cuisines.join(' or ')} meals matching your dietary restrictions — showing the best available options instead.`
             : null,
+        nutritionNote: finalTotal < calorieTarget * 0.85
+            ? `Note: This plan provides ${finalTotal} calories. The dataset may not have enough meals to fully match your ${calorieTarget} calorie target — consider adding snacks to bridge the gap.`
+            : `This plan provides approximately ${finalTotal} calories, following USDA guidelines with a 25/35/40 breakfast-lunch-dinner split.`,
     }
 }
