@@ -207,7 +207,11 @@ function pickWithFallback(savedPool, csvFallback, target, excludeNames) {
         if (result) return result
     }
     const csvFiltered = csvFallback.filter(m => !excludeNames.includes(m.name))
-    return pickMealNearTarget(csvFiltered, target)
+    const meal = pickMealNearTarget(csvFiltered, target)
+    if (meal && !meal.description) {
+        meal.description = generateDescription(meal)
+    }
+    return meal
 }
 
 function detectCuisine(foodName) {
@@ -318,9 +322,13 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
         const csvLunch     = csvPool.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
         const csvDinner    = csvPool.filter(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
 
-        const breakfast = pickWithFallback(savedBreakfast, csvBreakfast, breakfastTarget, [])
-        const lunch     = pickWithFallback(savedLunch, csvLunch, lunchTarget, [breakfast.name])
-        const dinner    = pickWithFallback(savedDinner, csvDinner, dinnerTarget, [breakfast.name, lunch.name])
+        const breakfastRaw = pickWithFallback(savedBreakfast, csvBreakfast, breakfastTarget, [])
+        const lunchRaw     = pickWithFallback(savedLunch, csvLunch, lunchTarget, [breakfastRaw.name])
+        const dinnerRaw    = pickWithFallback(savedDinner, csvDinner, dinnerTarget, [breakfastRaw.name, lunchRaw.name])
+
+        const breakfast = combineMeal('Breakfast', breakfastRaw, null)
+        const lunch     = combineMeal('Lunch', lunchRaw, null)
+        const dinner    = combineMeal('Dinner', dinnerRaw, null)
 
         const finalTotal = breakfast.calories + lunch.calories + dinner.calories
 

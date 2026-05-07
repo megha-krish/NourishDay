@@ -35,7 +35,7 @@ export default function FavoritesPage({ favorites, onRemove, onBack }) {
                     <p style={{ marginTop: 16, fontSize: 15 }}>No saved meals yet.</p>
                     <p style={{ fontSize: 13 }}>Tap 🤍 on any meal to save it here.</p>
                     <p style={{ fontSize: 13, marginTop: 8 }}>
-                        Save at least 3 meals to unlock "Use my saved meals" on the plan page.
+                        Save at least 1 meal to unlock "Use my saved meals" on the plan page.
                     </p>
                 </div>
             ) : (
