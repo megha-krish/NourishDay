@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ProfileForm from './components/ProfileForm'
+import FavoritesPage from './components/FavoritesPage'
 import { calculateDailyCalories } from './utils/calories'
 import { generateMealPlan } from './utils/api'
 import './App.css'
@@ -9,57 +10,92 @@ export default function App() {
     const [mealPlan, setMealPlan] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [view, setView] = useState('form')
+    const [useSaved, setUseSaved] = useState(false)
+    const [favorites, setFavorites] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('nourishday_favorites')) || []
+        } catch { return [] }
+    })
 
-    async function handleProfileSubmit(formData) {
-        setProfile(formData)
+    useEffect(() => {
+        localStorage.setItem('nourishday_favorites', JSON.stringify(favorites))
+    }, [favorites])
+
+    function addFavorite(meal) {
+        setFavorites(f => {
+            if (f.some(m => m.name === meal.name)) return f
+            return [...f, { ...meal, id: Date.now() }]
+        })
+    }
+
+    function removeFavorite(id) {
+        setFavorites(f => f.filter(m => m.id !== id))
+    }
+
+    function isFavorited(meal) {
+        return favorites.some(m => m.name === meal.name)
+    }
+
+    async function runGenerate(formProfile, savedFlag) {
         setLoading(true)
         setError(null)
         try {
-            const calorieTarget = calculateDailyCalories(formData)
+            const calorieTarget = calculateDailyCalories(formProfile)
             const plan = await generateMealPlan({
                 calorieTarget,
-                restrictions: formData.restrictions,
-                cuisines: formData.cuisines,
+                restrictions: formProfile.restrictions,
+                cuisines: formProfile.cuisines,
+                savedMeals: favorites,
+                useSaved: savedFlag,
             })
-            setMealPlan({ ...plan, calorieTarget, profile: formData })
+            setMealPlan({ ...plan, calorieTarget, profile: formProfile })
+            setView('plan')
         } catch (err) {
             setError(err.message)
         } finally {
             setLoading(false)
         }
+    }
+
+    async function handleProfileSubmit(formData) {
+        setProfile(formData)
+        await runGenerate(formData, false)
     }
 
     async function handleRegenerate() {
         if (!profile) return
-        setLoading(true)
-        setError(null)
-        try {
-            const calorieTarget = calculateDailyCalories(profile)
-            const plan = await generateMealPlan({
-                calorieTarget,
-                restrictions: profile.restrictions,
-                cuisines: profile.cuisines,
-            })
-            setMealPlan({ ...plan, calorieTarget, profile })
-        } catch (err) {
-            setError(err.message)
-        } finally {
-            setLoading(false)
-        }
+        await runGenerate(profile, useSaved)
     }
 
-    function handleEditProfile() {
-        setMealPlan(null)
-        setError(null)
+    async function handleToggleSaved() {
+        if (!profile) return
+        const newUseSaved = !useSaved
+        setUseSaved(newUseSaved)
+        await runGenerate(profile, newUseSaved)
     }
 
     if (loading) return <LoadingScreen />
     if (error)   return <ErrorScreen message={error} onBack={() => setError(null)} />
-    if (mealPlan) return (
+    if (view === 'favorites') return (
+        <FavoritesPage
+            favorites={favorites}
+            onRemove={removeFavorite}
+            onBack={() => setView(mealPlan ? 'plan' : 'form')}
+        />
+    )
+    if (view === 'plan' && mealPlan) return (
         <MealPlanView
             plan={mealPlan}
             onRegenerate={handleRegenerate}
-            onEdit={handleEditProfile}
+            onEdit={() => { setUseSaved(false); setView('form') }}
+            onFavorites={() => setView('favorites')}
+            onAddFavorite={addFavorite}
+            onRemoveFavorite={removeFavorite}
+            isFavorited={isFavorited}
+            useSaved={useSaved}
+            onToggleSaved={handleToggleSaved}
+            favoritesCount={favorites.length}
         />
     )
     return <ProfileForm onSubmit={handleProfileSubmit} initialProfile={profile} />
@@ -92,7 +128,8 @@ function ErrorScreen({ message, onBack }) {
 
 // ── Meal Plan View ───────────────────────────────────────────────────────────
 
-function MealPlanView({ plan, onRegenerate, onEdit }) {
+function MealPlanView({ plan, onRegenerate, onEdit, onFavorites, onAddFavorite,
+                          onRemoveFavorite, isFavorited, useSaved, onToggleSaved, favoritesCount }) {
     const { meals, totalCalories, calorieTarget, nutritionNote, profile } = plan
 
     const totalProtein = meals.reduce((s, m) => s + m.protein, 0)
@@ -102,16 +139,23 @@ function MealPlanView({ plan, onRegenerate, onEdit }) {
     return (
         <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 20px 80px' }}>
 
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between',
                 alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 28 }}>🌿</span>
                     <h1 style={{ margin: 0, fontSize: 28, color: 'var(--charcoal)' }}>NourishDay</h1>
                 </div>
-                <button onClick={onEdit} style={{ background: 'none', border: 'none',
-                    color: 'var(--muted)', cursor: 'pointer', fontSize: 14 }}>
-                    ← Edit Profile
-                </button>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <button onClick={onFavorites} style={{ background: 'none', border: 'none',
+                        color: 'var(--muted)', cursor: 'pointer', fontSize: 14 }}>
+                        ❤️ Saved {favoritesCount > 0 ? `(${favoritesCount})` : ''}
+                    </button>
+                    <button onClick={onEdit} style={{ background: 'none', border: 'none',
+                        color: 'var(--muted)', cursor: 'pointer', fontSize: 14 }}>
+                        ← Edit Profile
+                    </button>
+                </div>
             </div>
 
             <p style={{ margin: '0 0 28px', color: 'var(--muted)', fontSize: 14 }}>
@@ -142,19 +186,28 @@ function MealPlanView({ plan, onRegenerate, onEdit }) {
                     8 <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--muted)' }}>cups / day</span>
                 </p>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                    Per USDA Dietary Guidelines. Your meals contribute approximately {Math.round(meals.reduce((s, m) => s + m.water, 0) / 240)} cups.
+                    Per USDA Dietary Guidelines. Your meals contribute approximately {Math.round(meals.reduce((s, m) => s + (m.water || 0), 0) / 240)} cups.
                 </p>
             </div>
 
             {meals.map(meal => (
-                <MealCard key={meal.type} meal={meal} />
+                <MealCard
+                    key={meal.type}
+                    meal={meal}
+                    favorited={isFavorited(meal)}
+                    onFavorite={() => isFavorited(meal)
+                        ? onRemoveFavorite(meal.id)
+                        : onAddFavorite(meal)
+                    }
+                />
             ))}
 
             <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: '16px 0 24px' }}>
                 ℹ️ {nutritionNote}
             </p>
 
-            <div style={{ display: 'flex', gap: 12 }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                 <button className="btn-primary" style={{ flex: 1 }} onClick={onRegenerate}>
                     🔄 Regenerate Meals
                 </button>
@@ -164,6 +217,21 @@ function MealPlanView({ plan, onRegenerate, onEdit }) {
                     ✏️ Edit Profile
                 </button>
             </div>
+
+            {/* Use saved meals toggle */}
+            {favoritesCount >= 1 && (
+                <button
+                    onClick={onToggleSaved}
+                    style={{
+                        width: '100%', padding: '12px', borderRadius: 10, fontSize: 14,
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        background: useSaved ? 'var(--green)' : 'none',
+                        color: useSaved ? 'black' : 'var(--muted)',
+                        border: useSaved ? 'none' : '1.5px solid var(--border)',
+                    }}>
+                    {useSaved ? '❤️ Prioritizing your saved meals' : '❤️ Prioritize my saved meals'}
+                </button>
+            )}
         </div>
     )
 }
@@ -172,24 +240,32 @@ function MealPlanView({ plan, onRegenerate, onEdit }) {
 
 const MEAL_ICONS = { Breakfast: '🌅', Lunch: '☀️', Dinner: '🌙' }
 
-function MealCard({ meal }) {
+function MealCard({ meal, favorited, onFavorite }) {
     return (
         <div className="card" style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between',
                 alignItems: 'flex-start', marginBottom: 8 }}>
-                <div>
-          <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase',
-              letterSpacing: 1, fontWeight: 600 }}>
-            {MEAL_ICONS[meal.type]} {meal.type}
-          </span>
+                <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase',
+                        letterSpacing: 1, fontWeight: 600 }}>
+                        {MEAL_ICONS[meal.type]} {meal.type}
+                    </span>
                     <h3 style={{ margin: '4px 0 0', fontSize: 17, color: 'var(--charcoal)' }}>
                         {meal.name}
                     </h3>
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)',
-                    whiteSpace: 'nowrap', marginLeft: 12 }}>
-          {meal.calories} kcal
-        </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 12 }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)',
+                        whiteSpace: 'nowrap' }}>
+                        {meal.calories} kcal
+                    </span>
+                    <button onClick={onFavorite}
+                            style={{ background: 'none', border: 'none',
+                                cursor: 'pointer', fontSize: 20, padding: 0, lineHeight: 1 }}
+                            title={favorited ? 'Remove from saved' : 'Save meal'}>
+                        {favorited ? '❤️' : '🤍'}
+                    </button>
+                </div>
             </div>
             <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
                 {meal.description}
@@ -239,8 +315,8 @@ function MacroChart({ protein, carbs, fat }) {
                     <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: s.color }} />
                         <span style={{ color: 'var(--muted)' }}>
-              {s.label} {Math.round((s.cals / total) * 100)}%
-            </span>
+                            {s.label} {Math.round((s.cals / total) * 100)}%
+                        </span>
                     </div>
                 ))}
             </div>
