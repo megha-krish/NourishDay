@@ -194,6 +194,13 @@ export default function ProfileForm({ onSubmit, initialProfile }) {
                 )}
             </div>
 
+            <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--muted)',
+                lineHeight: 1.6, textAlign: 'center' }}>
+                🌿 Meal suggestions are based on the USDA nutrition dataset.
+                Cuisine and dietary preferences are applied where possible
+                but may not always be guaranteed!
+            </p>
+
             <button className="btn-primary" style={{ width: '100%', padding: '14px' }} onClick={handleSubmit}>
                 Build My Meal Plan →
             </button>

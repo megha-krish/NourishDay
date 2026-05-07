@@ -12,6 +12,8 @@
   --accent-light: #F0C4A8;
   --card-bg: #FFFFFF;
   --border: #E8E2D9;
+  --green: #4A6B4C;
+  --surface: #F5F5F0;
 }
 
 * { box-sizing: border-box; }

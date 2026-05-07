@@ -28,7 +28,7 @@ const CUISINE_KEYWORDS = {
         'saltimbocca', 'ribollita', 'caponata', 'cacio e pepe',
         'spaghetti', 'lasagna', 'pizza', 'angel hair'],
     mexican:       ['taco', 'burrito', 'enchilada', 'quesadilla', 'tamale',
-        'fajita', 'carnitas', 'paella'],
+        'fajita', 'carnitas'],
     asian:         ['stir-fry', 'stir fry', 'sushi', 'ramen', 'fried rice',
         'tofu', 'miso', 'teriyaki', 'pad thai', 'dumpling',
         'tempura', 'pho', 'bibimbap', 'kimchi', 'udon'],
@@ -228,9 +228,13 @@ function pickSide(allFoods, mealType, mainName, mainCalories, targetCalories, re
 
     if (sides.length === 0) return null
 
-    const compatibleSides = sides.filter(s =>
-        compatibleKeywords.some(kw => s.name.toLowerCase().includes(kw))
-    )
+    const mainWords = mainName.toLowerCase().split(/\s+/)
+    const compatibleSides = sides.filter(s => {
+        const sideLower = s.name.toLowerCase()
+        // Don't pair a side that shares a key word with the main meal
+        if (mainWords.some(w => w.length > 3 && sideLower.includes(w))) return false
+        return compatibleKeywords.some(kw => sideLower.includes(kw))
+    })
 
     if (compatibleSides.length > 0) return pickRandom(compatibleSides)
     return null

@@ -226,7 +226,7 @@ function MealPlanView({ plan, onRegenerate, onEdit, onFavorites, onAddFavorite,
                         width: '100%', padding: '12px', borderRadius: 10, fontSize: 14,
                         cursor: 'pointer', transition: 'all 0.2s',
                         background: useSaved ? 'var(--green)' : 'none',
-                        color: useSaved ? 'black' : 'var(--muted)',
+                        color: useSaved ? 'white' : 'var(--muted)',
                         border: useSaved ? 'none' : '1.5px solid var(--border)',
                     }}>
                     {useSaved ? '❤️ Prioritizing your saved meals' : '❤️ Prioritize my saved meals'}
