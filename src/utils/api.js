@@ -28,18 +28,19 @@ const CUISINE_KEYWORDS = {
         'saltimbocca', 'ribollita', 'caponata', 'cacio e pepe',
         'spaghetti', 'lasagna', 'pizza', 'angel hair'],
     mexican:       ['taco', 'burrito', 'enchilada', 'quesadilla', 'tamale',
-        'fajita', 'carnitas'],
+        'fajita', 'carnitas', 'paella'],
     asian:         ['stir-fry', 'stir fry', 'sushi', 'ramen', 'fried rice',
         'tofu', 'miso', 'teriyaki', 'pad thai', 'dumpling',
         'tempura', 'pho', 'bibimbap', 'kimchi', 'udon'],
     mediterranean: ['hummus', 'falafel', 'shawarma', 'tabouli', 'fattoush',
         'kibbeh', 'manakeesh', 'labneh', 'tawook', 'lentil soup',
-        'baba ganoush', 'grape leaves', "za'atar", 'paella'],
+        'baba ganoush', 'grape leaves', "za'atar"],
     american:      ['burger', 'sandwich', 'bbq', 'mac and cheese', 'hot dog',
         'pancake', 'waffle', 'meatloaf', 'pot roast', 'cornbread',
         'biscuits and gravy', 'pulled pork', 'reuben', 'club'],
-    indian:        ['curry', 'dal', 'biryani', 'tikka', 'naan', 'samosa',
-        'paneer', 'masala', 'tandoori', 'dosa', 'korma', 'vindaloo'],
+        indian: ['curry', 'dal', 'biryani', 'tikka', 'naan bread', 'samosa',
+            'paneer', 'masala', 'tandoori', 'dosa', 'korma', 'vindaloo',
+            'lentil', 'chickpea', 'chana', 'aloo', 'saag', 'raita'],
 }
 
 const CUISINE_SIDES = {
@@ -139,13 +140,17 @@ function passesRestrictions(item, restrictions) {
 }
 
 function applyCuisineFilter(meals, cuisines) {
-    if (!cuisines || cuisines.length === 0) return meals
+    if (!cuisines || cuisines.length === 0) return { meals, fellBack: false }
     const keywords = cuisines.flatMap(c => CUISINE_KEYWORDS[c] || [])
-    if (keywords.length === 0) return meals
+    if (keywords.length === 0) return { meals, fellBack: false }
     const filtered = meals.filter(m =>
         keywords.some(kw => m.name.toLowerCase().includes(kw))
     )
-    return filtered.length >= 3 ? filtered : meals
+    const hasBreakfast = filtered.some(m => m.mealType === 'Breakfast')
+    const hasLunch = filtered.some(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
+    const hasDinner = filtered.some(m => m.mealType === 'Dinner' || m.mealType === 'Lunch')
+    if (hasBreakfast && hasLunch && hasDinner) return { meals: filtered, fellBack: false }
+    return { meals, fellBack: true }
 }
 
 function pickRandom(arr) {
@@ -327,7 +332,7 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
         throw new Error('Not enough meals match your dietary restrictions. Try adjusting your filters.')
     }
 
-    const cuisineFiltered = applyCuisineFilter(mains, cuisines)
+    const { meals: cuisineFiltered, fellBack: cuisineFellBack } = applyCuisineFilter(mains, cuisines)
 
     const breakfastPool = cuisineFiltered.filter(m => m.mealType === 'Breakfast')
     const lunchPool = cuisineFiltered.filter(m => m.mealType === 'Lunch' || m.mealType === 'Dinner')
@@ -382,5 +387,8 @@ export async function generateMealPlan({ calorieTarget, restrictions, cuisines, 
         meals: [breakfast, lunch, dinner],
         totalCalories: Math.round(totalCalories),
         nutritionNote: `This plan provides approximately ${Math.round(totalCalories)} calories, following USDA guidelines with a 25/35/40 breakfast-lunch-dinner split.`,
+        cuisineWarning: cuisineFellBack
+            ? `We couldn't find enough ${cuisines.join(' or ')} meals matching your dietary restrictions — showing the best available options instead.`
+            : null,
     }
 }
