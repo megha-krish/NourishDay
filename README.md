@@ -109,6 +109,8 @@ Users can heart any meal to save it to a favorites list stored in localStorage. 
 
 **localStorage for persistence:**
 Profile data and saved meals are stored in localStorage — no backend needed. This keeps the app stateless and deployable as a pure static site. The profile persists between sessions so users don't have to re-enter their information every time.
+
+
 ---
 
 ## Challenges & How I Solved Them
