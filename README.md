@@ -1,7 +1,7 @@
 # 🌿 NourishDay
 
 ## Overview
-NourishDay is a personalized daily meal suggestion app that recommends three meals per day — breakfast, lunch, and dinner — with a total calorie count tailored to the individual user, following current U.S. Dietary Guidelines (HHS/USDA).
+NourishDay is a personalized daily meal suggestion app that recommends three meals per day consisting of breakfast, lunch, and dinner. These all have a total calorie count tailored to the individual user, following current U.S. Dietary Guidelines (HHS/USDA).
 
 Users enter their age, biological sex, weight, height, and activity level. NourishDay calculates their daily calorie target using the Mifflin-St Jeor equation (the basis for USDA DRI recommendations), then generates a personalized meal plan from the Kaggle Daily Food & Nutrition Dataset. Users can filter by dietary restrictions, select cuisine preferences, save favorite meals, and prioritize saved meals in future plans.
 
@@ -96,19 +96,19 @@ nutrition.csv       # Kaggle Daily Food & Nutrition Dataset
 ## Key Design Decisions
 
 **Dietary restrictions and cuisine selection:**
-Users can select from common dietary restrictions (Vegetarian, Vegan, Gluten-Free, Nut-Free, Dairy-Free, Egg-Free, No Shellfish, Soy-Free) and up to 3 favorite cuisines. These are applied as hard filters on the dataset — restrictions are never violated, and cuisine preferences are honored where the data allows. A disclaimer on the form sets expectations upfront that preferences aren't always guaranteed.
+Users can select from common dietary restrictions (Vegetarian, Vegan, Gluten-Free, Nut-Free, Dairy-Free, Egg-Free, No Shellfish, Soy-Free) and up to 3 favorite cuisines. These are applied as hard filters on the dataset. Restrictions are never violated, and cuisine preferences are prioritized where the data allows. A disclaimer on the form sets expectations upfront that preferences aren't always guaranteed.
 
 **Cuisine-aware side dish pairing:**
-Rather than randomly pairing a main and a side, the app detects the cuisine of the main meal and selects a culturally compatible side from a curated keyword list. This prevents pairings like Paella + Hummus that are nutritionally fine but culinarily confusing.
+Instead of randomly pairing a main and a side based on the dataset, the app detects the cuisine of the main meal and selects a culturally compatible side from a curated keyword list. This prevents pairings like Paella + Hummus that are nutritionally fine but confusing based on cuisine.
 
 **Fallback warnings over silent failures:**
-When a cuisine + dietary restriction combination can't be fully satisfied by the dataset, the app shows an explicit warning rather than silently returning unrelated meals. Users deserve to know when their preferences couldn't be honored.
+When a cuisine + dietary restriction combination can't be fully satisfied by the dataset, the app shows an explicit warning rather than silently returning unrelated meals. Users need to know when their preferences couldn't be satisfied.
 
 **Favorites and saved meal prioritization:**
 Users can heart any meal to save it to a favorites list stored in localStorage. Once at least one meal is saved, a toggle appears on the meal plan page to prioritize saved meals in future plans. This makes the app feel like it learns from you over time as the more you use it, the more personalized it gets.
 
 **localStorage for persistence:**
-Profile data and saved meals are stored in localStorage — no backend needed. This keeps the app stateless and deployable as a pure static site. The profile persists between sessions so users don't have to re-enter their information every time.
+Profile data and saved meals are stored in localStorage, so no backend needed. This keeps the app stateless and deployable as a pure static site. The profile persists between sessions so users don't have to re-enter their information every time.
 
 
 ---
@@ -122,7 +122,7 @@ The hardest part was getting meal pairings to make culinary sense. The dataset c
 The Kaggle dataset has strong coverage for American and Mediterranean meals but limited Indian and Asian vegetarian options. When a combination yields fewer than 3 unique meals, the app falls back to the full filtered pool and notifies the user. I documented this as a known limitation.
 
 **Calorie gap:**
-Individual meals in the dataset are often lower calorie than the per-slot targets. I widened the selection tolerance to 70% and added a warning note when the plan total falls more than 15% below the user's target, suggesting they add snacks.
+Individual meals in the dataset are often lower calorie than the per-slot targets. I widened the selection tolerance to 70% and added a warning note when the plan total falls more than 15% below the user's target, suggesting they add snacks to compensate.
 
 **Missing descriptions in saved meals flow:**
 Meals returned through the saved meals fallback path were skipping `combineMeal`, which meant they had no `type` or `description` field. Fixed by routing all meal objects through `combineMeal` regardless of which path they came from.
@@ -131,9 +131,10 @@ Meals returned through the saved meals fallback path were skipping `combineMeal`
 
 ## What I'd Improve With More Time
 
-- **Larger dataset** — more meals, especially for Indian, Asian, and vegan combinations
+- **Larger dataset** — more meals, especially for Indian, Asian, and vegan/vegetarian combinations
 - **Single meal regeneration** — swap just one meal slot instead of regenerating the full plan
 - **Daily history** — store the last 7 days of meal plans in localStorage
+- **User Login** - have users make multiple accounts and log-in to see their account history
 - **Allergy support** — free-text allergy input beyond the preset restriction tags
 - **Better calorie matching** — combine multiple smaller items to hit calorie targets more precisely
 - **Unheart from meal card** — currently you remove saved meals from the Saved Meals page; ideally the heart button would toggle directly from the meal card
